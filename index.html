@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Swar Game</title>
+    <!-- Icon names are here: https://pictogrammers.github.io/@mdi/font/2.0.46/ -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/2.6.2/vuetify.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+    <style>
+        .XXv-alert {
+            position: fixed;
+            left: 50%;
+            top: 100px;
+            transform: translate(-50%, -50%);
+            margin: 0 auto;
+        }
+
+        .hide-swars{
+            color: #e0e0e0 !important; 
+        }
+
+        .hide-swars:hover{
+            color: black !important; 
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <template id="home-template">
+        <div>
+            <h1>Welcome to Swar Game
+                <v-btn @click="newLesson" class="mx-2" fab dark x-small XXcolor="primary">
+                    <v-icon dark>mdi-plus</v-icon>
+                </v-btn>
+                <v-btn @click="downloadAllData" class="mx-2" fab dark x-small XXcolor="primary">
+                    <v-icon dark>mdi-download</v-icon>
+                </v-btn>
+            </h1>
+            <!-- <v-btn x-large color="success" class="mt-5">
+                Add New Lesson
+            </v-btn> -->
+
+            <v-simple-table class="mt-5" style="width: 800px">
+                <template v-slot:default>
+                    <thead>
+                        <tr>
+                            <th class="text-left" width="30px"></th>
+                            <th class="text-left" width="30px"></th>
+                            <th class="text-left" width="30px"></th>
+                            <th class="text-left">Lesson Name</th>
+                            <th class="text-left" width="30px">
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(lesson, i) in state.lessons" :key="i" @click="playGame(i)">
+                            <td>
+                                <v-btn icon @click="playGame(i)">
+                                    <v-icon>mdi-play</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>
+                                <v-btn icon @click="editLesson(i)">
+                                    <v-icon>mdi-lead-pencil</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>
+                                <v-btn icon @click="downloadLesson(lesson)">
+                                    <v-icon>mdi-download</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>{{lesson.name}}</td>
+                            <td>
+                                <v-btn icon color="red" @click="deleteLesson(lesson.name)">
+                                    <v-icon>mdi-delete-forever</v-icon>
+                                </v-btn>
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </v-simple-table>
+
+        </div>
+    </template>
+
+    <template id="lesson-template">
+        <div>
+            <h2>{{mode}} lesson {{currentPhraseIndex}}/{{lesson.phrases.length}}
+                <v-btn icon @click="playGame" v-if="mode == 'Edit'">
+                    <v-icon XXsmall>mdi-play</v-icon>
+                </v-btn>
+                <v-btn icon @click="deleteLesson" color="red" v-if="mode == 'Edit'">
+                    <v-icon XXsmall>mdi-delete</v-icon>
+                </v-btn>
+            </h2>
+            <v-text-field class="mt-5" v-model="lesson.name" label="Name"></v-text-field>
+            <!-- <p>
+                <v-chip class="ma-2" :key="i" v-for="(sData, i) in swarTimeData">
+                    {{sData.swarEng}}
+                </v-chip>
+            </p> -->
+
+            <audio style="display: none;" id="recordingAudio" ref="recordingAudio" controls
+                class="audio-control"></audio>
+
+            <v-btn class="mb-5" @click="addNewPhrase" light XXclass="mt-4">Add New Phrase
+                <v-icon right>mdi-plus</v-icon>
+            </v-btn>
+
+
+
+            <v-app-bar class="mb-1" flat v-for="(phrase, i) in lesson.phrases" :key="i" short dense rounded :color="currentPhraseIndex == i ? '#def4ff' : ''">
+
+                <v-chip @click="currentPhraseIndex = i">
+                    {{i}}
+                </v-chip>
+
+                <v-divider class="ml-5" vertical></v-divider>
+
+                <v-switch @click="setCurrentPhraseIndexAndRecordingState(i, 'Swar')" class="ml-5"
+                    v-model="phrase.recordingSwar" :disabled="disableRecoringFor(phrase, i, 'Swar')" label="Record Swar"
+                    color="red" hide-details>
+                </v-switch>
+
+                <v-icon v-if="!phrase.swarPhrase" color="warning" class="ml-5">mdi-exclamation</v-icon>
+                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
+
+                <v-btn icon @click="playPhrase(i, 'swar')" :disabled="!phrase.swarPhrase || recording">
+                    <v-icon>mdi-play</v-icon>
+                </v-btn>
+
+                <v-divider class="ml-5" vertical></v-divider>
+
+                <v-switch @click="setCurrentPhraseIndexAndRecordingState(i, 'Aakar')" class="ml-5"
+                    v-model="phrase.recordingAakar" :disabled="disableRecoringFor(phrase, i, 'Aakar')"
+                    label="Record Aakar" color="red" hide-details>
+                </v-switch>
+
+                <v-icon v-if="phrase.aakarPhrase == null" color="warning" class="ml-5">mdi-exclamation</v-icon>
+                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
+
+                <v-btn icon @click="playPhrase(i, 'aakar')" :disabled="!phrase.aakarPhrase || recording">
+                    <v-icon>mdi-play</v-icon>
+                </v-btn>
+
+
+                <v-divider class="ml-5" vertical></v-divider>
+
+                <v-btn icon color="red" @click="deletePhrase(i)">
+                    <v-icon>mdi-delete-forever</v-icon>
+                </v-btn>
+
+                <v-divider vertical></v-divider>
+
+                <div v-if="phrase.swarPhrase" class="ml-5">
+                    <v-chip>{{phrase.swarPhrase.swarTimeData.map(d => d.swarEng).join(' ')}}</v-chip>
+                </div>
+            </v-app-bar>
+
+
+            <!-- <v-app-bar flat>
+                <v-switch v-model="recordingSwar" :disabled="recordingAakar" label="Record Swar" color="red"
+                    hide-details>
+                </v-switch>
+                <v-icon v-if="swarPhrase.audioBlob == null" color="warning" class="ml-5">mdi-exclamation</v-icon>
+                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
+
+                <v-divider class="ml-5" vertical></v-divider>
+
+                <v-switch class="ml-5" v-model="recordingAakar" :disabled="recordingSwar" label="Record Aakar"
+                    color="red" hide-details>
+                </v-switch>
+                <v-icon v-if="aakarPhrase.audioBlob == null" color="warning" class="ml-5">mdi-exclamation</v-icon>
+                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
+
+                <v-divider class="ml-5" vertical></v-divider>
+
+                <v-btn class="ml-5" @click="addPhrase" light class="mt-4">Add Phrase
+                    <v-icon right>mdi-plus</v-icon>
+                </v-btn>
+
+            </v-app-bar>
+ -->
+
+
+            <!-- <v-simple-table>
+                <template v-slot:default>
+                    <thead>
+                        <tr>
+                            <th class="text-left" width="30px">
+                            </th>
+                            <th class="text-left">
+                                Phrases
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(phrase, i) in lesson.phrases" :key="i" @click="selectPhrase(i)">
+                            <td>
+                                <v-btn icon color="red" @click="deletePhrase(i)">
+                                    <v-icon>mdi-delete-forever</v-icon>
+                                </v-btn>
+                            </td>
+                            <td>{{ i }}, Swar={{phrase.swarPhrase ? phrase.swarPhrase.swarTimeData.length : '--'}},
+                                Aakar={{phrase.aakarPhrase ? phrase.aakarPhrase.swarTimeData.length : '--'}},
+                                Audio={{phrase.audioBlob ? 'OK' : '--'}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </v-simple-table> -->
+
+
+            <!-- <v-btn v-if="!recording" @click="recording = !recording" color="success">Record
+                <v-icon right>mdi-record</v-icon>
+            </v-btn>
+            <v-btn v-else @click="recording = !recording" color="error">Stop
+                <v-icon right>mdi-stop</v-icon>
+            </v-btn> -->
+
+            <!-- <hr> -->
+
+            <p class="mt-5">
+                <v-btn @click="saveLesson" light>Save Lesson
+                    <v-icon right>mdi-content-save</v-icon>
+                </v-btn>
+                <v-btn @click="cancel" light class="ml-5">Discard Changes
+                    <v-icon right>mdi-cancel</v-icon>
+                </v-btn>
+                <v-btn v-if="mode == 'Edit'" @click="deleteLesson" light class="ml-5">Delete Lesson
+                    <v-icon right>mdi-delete</v-icon>
+                </v-btn>
+                <v-btn v-if="mode == 'Edit'" @click="playGame" light class="ml-5">Play Game
+                    <v-icon right>mdi-play</v-icon>
+                </v-btn>
+
+            </p>
+
+            <pre>
+Tips: 
+Leftmost black key = start recording swar.
+Second leftmost black key = start recording aakar.
+Leftmost white key = stop the recording. 
+            </pre>
+
+        </div>
+    </template>
+
+    <template id="play-template">
+        <div>
+            <h2>
+                Lesson: {{lesson.name}}
+                <v-btn icon XXclass="mr-3" @click="editLesson">
+                    <v-icon XXsmall>mdi-lead-pencil</v-icon>
+                </v-btn>
+                <v-btn icon XXclass="mr-3" @click="deleteLesson" color="red">
+                    <v-icon XXsmall>mdi-delete</v-icon>
+                </v-btn>
+            </h2>
+
+            <audio style="display: none;" id="recordingAudio" ref="recordingAudio" controls class="audio-control"
+                XXmuted="muted"></audio>
+
+            <!-- <h4 v-if="lesson.phrases">
+                Info: # phrases = {{lesson.phrases.length}}
+            </h4> -->
+
+            <v-radio-group v-model="gameTypeIndex">
+                <v-radio v-for="(type, i) in gameTypes" :key="i" :label="type" :value="i"></v-radio>
+            </v-radio-group>
+
+            <v-btn @click="play('aakar')" light>Play Aakar
+                <v-icon right>mdi-music-note</v-icon>
+            </v-btn>
+
+            <v-btn @click="play('swar')" light class="ml-5">Play Swar
+                <v-icon right>mdi-alphabetical</v-icon>
+            </v-btn>
+
+            <v-btn @click="doNext" light class="ml-5">Next
+                <v-icon right>mdi-skip-next</v-icon>
+            </v-btn>
+
+            <v-chip v-if="lesson.phrases[currentPhraseIndex].swarPhrase" class="ml-5 hide-swars">
+                {{lesson.phrases[currentPhraseIndex].swarPhrase.swarTimeData.map(d => d.swarEng).join(', ')}}
+            </v-chip>
+
+            <h3 class="mt-5 mb-2">Phrases used in this game</h3>
+            <v-chip :key="i" v-for="(phrase, i) in lesson.phrases" class="mr-1" @click="playPhraseAtIndex(i)">
+                {{phrase.swarPhrase.swarTimeData.map(d => d.swarEng).join(' ')}}
+            </v-chip>
+
+        </div>
+    </template>
+
+    <template id="bar-template">
+        <div>
+            <h2>This is bar</h2>
+        </div>
+    </template>
+
+    <div id="app">
+        <v-app @showMessage="showMessage">
+            <v-app-bar app color="deep-purple accent-4" dark clipped-left>
+                <!-- <v-app-bar-nav-icon></v-app-bar-nav-icon> -->
+                <!-- <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon> -->
+                <!-- <v-app-bar-nav-icon v-if="permanent" @click.stop="drawer = !drawer"></v-app-bar-nav-icon> -->
+                <v-toolbar-title style="cursor: pointer" @click="$router.push('/')">
+                    Swar Game
+                </v-toolbar-title>
+                <v-spacer></v-spacer>
+                <v-spacer></v-spacer>
+                <!-- <v-btn to="/bar" class="mr-3" light>
+                    Record
+                    <v-icon right>mdi-record</v-icon>
+                </v-btn> -->
+                <!-- <v-btn to="/bar" icon>
+                    <v-icon>mdi-logout</v-icon>
+                </v-btn> -->
+            </v-app-bar>
+
+            <!-- <v-navigation-drawer app clipped permanent>
+                <v-card elevation="2">
+                    <v-card-title>
+                        Lessons
+                        <v-spacer></v-spacer>
+                        <v-btn @click="newLesson" class="mx-2" fab dark x-small color="primary">
+                            <v-icon dark>mdi-plus</v-icon>
+                        </v-btn>
+                        <v-btn @click="downloadAllData" class="mx-2" fab dark x-small color="primary">
+                            <v-icon dark>mdi-download</v-icon>
+                        </v-btn>
+                        
+                    </v-card-title>
+
+                    <v-list nav dense>
+                        <v-list-item-group XXv-model="selectedLessonIndex" XXactive-class="deep-purple--text text--accent-4">
+                            <v-list-item :key="i" @click="playLesson(i)" v-for="(lesson, i) in state.lessons">
+                                <v-list-item-content>
+                                    <v-list-item-title>{{lesson.name}}</v-list-item-title>
+                                </v-list-item-content>
+                            </v-list-item>
+                        </v-list-item-group>
+                    </v-list>
+                </v-card>
+            </v-navigation-drawer> -->
+
+            <v-main>
+                <v-container fluid>
+                    <v-alert dens type="success" :value="showMessageToggle" :type="messageType" XXdense
+                        transition="slide-y-transition">
+                        {{message}}
+                    </v-alert>
+                    <router-view></router-view>
+                </v-container>
+            </v-main>
+
+            <v-footer app>
+                <span>Kaushik Ashodiya </span>
+                <v-spacer></v-spacer>
+                <v-divider vertical></v-divider>
+                <span class="mx-3"> MIDI: {{deviceName}} [{{deviceId}}] </span>
+                <v-divider vertical></v-divider>
+                <span class="mx-3"> Recoder {{mediaRecorderCreated ? 'is ready' : ' is not ready'}} </span>
+            </v-footer>
+        </v-app>
+
+        <v-dialog v-model="genericDialog.toggle" persistent max-width="290">
+            <v-card>
+                <v-card-title class="text-h5"> {{genericDialog.title}} </v-card-title>
+                <v-card-text class="text-subtitle-1"> {{genericDialog.body}} </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn text :key="i" v-for="(action, i) in genericDialog.actions" @click="genericDialogAction(action, genericDialog.callbackData)">
+                        {{action}}
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+
+        <!-- <v-snackbar v-model="showMesssage" color="blue-grey">
+            {{message}}
+        </v-snackbar> -->
+
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/2.6.2/vuetify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.5.3/vue-router.min.js"></script>
+    <!-- idb Docs: https://github.com/jakearchibald/idb -->
+    <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
+    <!-- WebMidi Docs: https://webmidijs.org/docs/ -->
+    <script src="https://cdn.jsdelivr.net/npm/webmidi@next/dist/iife/webmidi.iife.js"></script>
+    <!-- For JsZip docs: https://stuk.github.io/jszip/documentation/api_zipobject/async.html -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
