@@ -10,14 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
 
     <style>
-        .XXv-alert {
-            position: fixed;
-            left: 50%;
-            top: 100px;
-            transform: translate(-50%, -50%);
-            margin: 0 auto;
-        }
-
         .hide-swars{
             color: #e0e0e0 !important; 
         }
@@ -25,8 +17,6 @@
         .hide-swars:hover{
             color: black !important; 
         }
-
-
     </style>
 </head>
 
@@ -41,10 +31,6 @@
                     <v-icon dark>mdi-download</v-icon>
                 </v-btn>
             </h1>
-            <!-- <v-btn x-large color="success" class="mt-5">
-                Add New Lesson
-            </v-btn> -->
-
             <v-simple-table class="mt-5" style="width: 800px">
                 <template v-slot:default>
                     <thead>
@@ -163,31 +149,6 @@
             </v-app-bar>
 
 
-            <!-- <v-app-bar flat>
-                <v-switch v-model="recordingSwar" :disabled="recordingAakar" label="Record Swar" color="red"
-                    hide-details>
-                </v-switch>
-                <v-icon v-if="swarPhrase.audioBlob == null" color="warning" class="ml-5">mdi-exclamation</v-icon>
-                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
-
-                <v-divider class="ml-5" vertical></v-divider>
-
-                <v-switch class="ml-5" v-model="recordingAakar" :disabled="recordingSwar" label="Record Aakar"
-                    color="red" hide-details>
-                </v-switch>
-                <v-icon v-if="aakarPhrase.audioBlob == null" color="warning" class="ml-5">mdi-exclamation</v-icon>
-                <v-icon v-else class="ml-5" color="success">mdi-check</v-icon>
-
-                <v-divider class="ml-5" vertical></v-divider>
-
-                <v-btn class="ml-5" @click="addPhrase" light class="mt-4">Add Phrase
-                    <v-icon right>mdi-plus</v-icon>
-                </v-btn>
-
-            </v-app-bar>
- -->
-
-
             <!-- <v-simple-table>
                 <template v-slot:default>
                     <thead>
@@ -214,16 +175,6 @@
                     </tbody>
                 </template>
             </v-simple-table> -->
-
-
-            <!-- <v-btn v-if="!recording" @click="recording = !recording" color="success">Record
-                <v-icon right>mdi-record</v-icon>
-            </v-btn>
-            <v-btn v-else @click="recording = !recording" color="error">Stop
-                <v-icon right>mdi-stop</v-icon>
-            </v-btn> -->
-
-            <!-- <hr> -->
 
             <p class="mt-5">
                 <v-btn @click="saveLesson" light>Save Lesson
@@ -265,10 +216,6 @@ Leftmost white key = stop the recording.
 
             <audio style="display: none;" id="recordingAudio" ref="recordingAudio" controls class="audio-control"
                 XXmuted="muted"></audio>
-
-            <!-- <h4 v-if="lesson.phrases">
-                Info: # phrases = {{lesson.phrases.length}}
-            </h4> -->
 
             <v-radio-group v-model="gameTypeIndex">
                 <v-radio v-for="(type, i) in gameTypes" :key="i" :label="type" :value="i"></v-radio>
@@ -382,13 +329,9 @@ Leftmost white key = stop the recording.
                 </v-card-actions>
             </v-card>
         </v-dialog>
-
-
         <!-- <v-snackbar v-model="showMesssage" color="blue-grey">
             {{message}}
         </v-snackbar> -->
-
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
