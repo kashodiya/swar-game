@@ -20,17 +20,17 @@ const Home = Vue.component('Home', {
         }
     },
     methods: {
-        deleteLesson(name){
-            this.$root.$emit('deleteLesson', {name, goHome: false});
+        deleteLesson(name) {
+            this.$root.$emit('deleteLesson', { name, goHome: false });
         },
         playGame(index) {
             console.log(`Playing index ${index}`);
             this.$root.$router.push({ path: '/play', query: { index } }).catch(err => { }); //Modes can be add or edit
         },
-        editLesson(index){
+        editLesson(index) {
             this.$root.$router.push({ path: '/editLesson', query: { mode: 'Edit', index } }).catch(err => { }); //Modes can be add or edit
         },
-        downloadLesson(lesson){
+        downloadLesson(lesson) {
             let zip = new JSZip();
             zip.file(lesson.name + '.json', JSON.stringify(lesson, null, 2));
             lesson.phrases.forEach((ph, i) => {
@@ -42,10 +42,10 @@ const Home = Vue.component('Home', {
                 saveAs(finalZipBlob, finalFileName);
             });
         },
-        newLesson(){
+        newLesson() {
             this.$root.$emit('newLesson');
         },
-        downloadAllData(){
+        downloadAllData() {
             this.$root.$emit('downloadAllData');
         },
         test() {
@@ -79,11 +79,17 @@ const Play = Vue.component('Play', {
             state: store.state,
             index: -1,
             lesson: {},
+            isPlaying: false,
             playIndexes: [],    //Indexes of phrase for playing
             currentPlayIndexIndex: 0,
             currentPhraseIndex: 0,
+            uniquePhraseSizes: [],
+            limitPhraseBySwarLength: false,
+            selectedPhraseSizesIndex: 0,
+            phraseSizeOptions: ['mdi-code-equal', 'mdi-code-greater-than-or-equal', 'mdi-code-less-than-or-equal', 'mdi-code-not-equal'],
+            selectedPhraseSizeOptionIndex: 0,
             gameTypeIndex: 2,
-            gameTypes: ['All in order', 'Random (no repeat)', 'Random (repeat)']
+            gameTypes: ['Play all in order', 'Play Random (no repeat)', 'Play random (repeat)']
         }
     }, watch: {
         $route: {
@@ -94,9 +100,27 @@ const Play = Vue.component('Play', {
             },
             deep: true
         },
+        limitPhraseBySwarLength(){
+            this.limitPhrases();
+        },
+        selectedPhraseSizesIndex(){
+            console.log(`selectedPhraseSizesIndex = ${this.selectedPhraseSizesIndex}`);
+            // prepareGame('phraseSizeLimit');
+            this.limitPhrases();
+        },
+        selectedPhraseSizeOptionIndex(){
+            this.limitPhrases();
+        },
+        // selectedPhraseSizeOptions(){
+        //     console.log(`selectedPhraseSizeOptions = ${this.selectedPhraseSizeOptions}`);
+        //     // prepareGame('phraseSizeLimit');
+        //     this.limitPhrases();
+        // },
         gameTypeIndex() {
             console.log(`Game type changed to ${this.gameTypes[this.gameTypeIndex]}`);
+            // this.prepareGame();
             this.prepareGame();
+            // this.limitPhrases();
         }
     },
     methods: {
@@ -114,6 +138,29 @@ const Play = Vue.component('Play', {
             //Immediately play aakar
             this.play('aakar');
         },
+        getPhraseColorClass(index){
+            return this.playIndexes.indexOf(index) >= 0 ? '' : 'swars-not-in-game';
+        },
+        limitPhrases(){
+            this.prepareGame();
+            if(!this.limitPhraseBySwarLength) return;
+            let selectedPhraseSize = this.uniquePhraseSizes[this.selectedPhraseSizesIndex];
+            console.log(`Before filter playIndexes = ${this.playIndexes.join(", ")}`);
+            this.playIndexes = this.playIndexes.filter(i => {
+                let swarSize = this.lesson.phrases[i].swarPhrase.swarTimeData.length;
+                let compare = this.phraseSizeOptions[this.selectedPhraseSizeOptionIndex];
+                if(compare == 'mdi-code-equal'){
+                    return swarSize == selectedPhraseSize;
+                }else if(compare == 'mdi-code-greater-than-or-equal'){
+                    return swarSize >= selectedPhraseSize;
+                }else if(compare == 'mdi-code-less-than-or-equal'){
+                    return swarSize <= selectedPhraseSize;
+                }else if(compare == 'mdi-code-not-equal'){
+                    return swarSize != selectedPhraseSize;
+                }
+            });
+            console.log(`After filter playIndexes = ${this.playIndexes.join(", ")}`);
+        },
         prepareGame() {
             if (this.gameTypeIndex == 0) {    //All
                 this.playIndexes = Array.from(Array(this.lesson.phrases.length).keys());
@@ -128,6 +175,13 @@ const Play = Vue.component('Play', {
             this.currentPlayIndexIndex = 0;
             console.log({ playIndexes: this.playIndexes.join(',') });
             this.play('aakar');
+            //Find unique phrase sizes
+            let sizes = this.lesson.phrases.map(ph => ph.swarPhrase.swarTimeData.length);
+            console.log(`swarPhrase sizes ${sizes.join(",")}`);
+            
+            this.uniquePhraseSizes = sizes.filter(onlyUnique).sort();
+            console.log(`Unique swarPhrase sizes ${this.uniquePhraseSizes.join(",")}`);
+            // this.limitPhrases();
         },
         playPhraseAtIndex(index) {
             //Find index
@@ -147,7 +201,14 @@ const Play = Vue.component('Play', {
             const audioBlob = this.lesson.phrases[this.currentPhraseIndex][what + 'Phrase'].audioBlob;
             const audioURL = window.URL.createObjectURL(audioBlob);
             recordingAudio.src = audioURL;
+            this.isPlaying = true;
             recordingAudio.play();
+        },
+        stopPlaying() {
+            console.log('Stopping current playing...');
+            recordingAudio.pause();
+            recordingAudio.currentTime = 0;
+            this.isPlaying = false;
         },
         setLesson() {
             console.log(`Setting lesson at index ${this.index}`);
@@ -162,7 +223,13 @@ const Play = Vue.component('Play', {
     beforeDestroy() {
     },
     mounted() {
+        // this.prepareGame();
         this.prepareGame();
+        let recordingAudio = this.$refs.recordingAudio;
+        recordingAudio.addEventListener("ended", () => {
+            console.log("recordingAudio ended playing");
+            this.isPlaying = false;
+        });
     },
     created() {
         this.index = this.$route.query.index;
@@ -185,6 +252,7 @@ const Lesson = Vue.component('Lesson', {
             swarPhrase: {}, //Example: {swarTimeData: [...this.swarTimeData], audioBlob: this.$options.audioBlob};
             aakarPhrase: {},
             recording: false,
+            ignorePhraseRecording: false,
             // recordingFor: '',       //Aakar, Swar
             // recordingAakar: false,
             // recordingSwar: false,
@@ -222,7 +290,7 @@ const Lesson = Vue.component('Lesson', {
         // },
     }, methods: {
         deleteLesson() {
-            this.$root.$emit('deleteLesson', {name: this.lesson.name, goHome: true});
+            this.$root.$emit('deleteLesson', { name: this.lesson.name, goHome: true });
         },
         playGame() {
             console.log(`Playing index ${this.index}`);
@@ -403,6 +471,16 @@ const Lesson = Vue.component('Lesson', {
             this.recStartDateTime = new Date();
 
             mediaRecorder.onstop = async (e) => {
+                if (this.ignorePhraseRecording) {
+                    console.log('mediaRecorder is stopped...ignorePhraseRecording is true, so not saving the phrase.');
+                    let phrase = this.lesson.phrases[this.currentPhraseIndex];
+                    phrase.recordingSwar = false;
+                    phrase.recordingAakar = false;
+                    this.ignorePhraseRecording = false;
+                    this.setCurrentPhraseIndexAndRecordingState(this.currentPhraseIndex, phrase.recordingFor);
+                    this.$forceUpdate();
+                    return;
+                }
                 console.log('mediaRecorder is stopped...saving data');
                 // let chunks = this.$options.chunks;
                 const blob = new Blob(chunks, { 'type': 'audio/ogg; codecs=opus' });
@@ -410,7 +488,6 @@ const Lesson = Vue.component('Lesson', {
                 chunks = [];
                 const audioURL = window.URL.createObjectURL(blob);
                 recordingAudio.src = audioURL;
-
                 this.savePhrase();
                 // this.audioDataReady = true;
                 // await this.saveRecord();
@@ -438,7 +515,11 @@ const Lesson = Vue.component('Lesson', {
         },
         async stopRecording() {
             // let mediaRecorder = this.$options.mediaRecorder;
-            mediaRecorder.stop();
+            if (mediaRecorder.state == 'inactive') {
+                console.log('stopRecording() called. Audio is inactive, so not stopping it.');
+            } else {
+                mediaRecorder.stop();
+            }
         },
         calculateSwarTimes() {
             //Take recStartDateTime and iterate swarTimeData to set time and duration
@@ -453,13 +534,13 @@ const Lesson = Vue.component('Lesson', {
             // console.log(this.swarTimeData);
         },
         unregisterMidiListeners() {
-            if(mySynth){
+            if (mySynth) {
                 mySynth.removeListener('noteon');
                 mySynth.removeListener('noteoff');
             }
         },
         registerMidiListeners() {
-            if (this.midiListenersRregistered){
+            if (this.midiListenersRregistered) {
                 console.log('Skipping registerMidiListeners, as it is already registered.');
                 return;
             };
@@ -526,23 +607,38 @@ const Lesson = Vue.component('Lesson', {
                 } else if (e.note.number == 37 || e.note.number == 39) {
                     let forWhat = e.note.number == 37 ? 'Swar' : 'Aakar';
                     console.log(`Starting to record ${forWhat} on key = ${e.note.number}`);
-                    if(this.currentPhraseIndex == -1){
+                    if (this.currentPhraseIndex == -1) {
                         this.addNewPhrase();
                     }
                     let phrase = this.lesson.phrases[this.currentPhraseIndex];
                     phrase.recordingSwar = (forWhat == 'Swar');
                     phrase.recordingAakar = (forWhat == 'Aakar');
-                    this.setCurrentPhraseIndexAndRecordingState(this.currentPhraseIndex, forWhat);                    
+                    this.setCurrentPhraseIndexAndRecordingState(this.currentPhraseIndex, forWhat);
                 } else {
                     console.log(`Ignoring note: ${e.note.number}`);
                 }
             }, { channels: [1, 2, 3] });
             this.midiListenersRregistered = true;
             console.log('WebMidi synth key event registered');
-        }
+        },
         // setMode(mode) {
         //     console.log({ mode });
         // }
+        keyListener(e) {
+            if (e.key === "Escape") {
+                console.log('Escape has been pressed');
+                if (this.recording) {
+                    this.ignorePhraseRecording = true;
+                    this.stopRecording();
+                }
+            } else if (e.key === "P" || e.key === "p") {
+                this.playGame();
+            } else if (e.key === "S" || e.key === "s") {
+                this.saveLesson();
+            } else if (e.key === "A" || e.key === "a") {
+                this.addNewPhrase();
+            }
+        }
     },
     beforeDestroy() {
         //Stop media and midi 
@@ -550,8 +646,11 @@ const Lesson = Vue.component('Lesson', {
         mediaRecorder.onstop = null;
         if (mediaRecorder.state == 'active') mediaRecorder.stop();
         this.unregisterMidiListeners();
+        window.removeEventListener("keydown", this.keyListener);
     },
     mounted() {
+        window.addEventListener("keydown", this.keyListener);
+
         console.log('Lesson mounted');
         // console.log({ mode: this.$route.query.mode });
         this.mode = this.$route.query.mode;
@@ -761,14 +860,14 @@ function initVue() {
                 console.log('Test event called.');
                 // console.log({ swarTimeData: this.swarTimeData });
             },
-            deleteLesson({name, goHome}) {
-                if(!goHome) goHome = false;
+            deleteLesson({ name, goHome }) {
+                if (!goHome) goHome = false;
                 this.$root.$emit('showGenericDialog', {
                     title: 'Delete lesson',
                     body: 'Do you want to delete this lesson?',
                     actions: ['Delete', 'Cancel'],
                     callbackEventName: 'deleteConformation',
-                    callbackData: {name, goHome}
+                    callbackData: { name, goHome }
                 });
             },
             async deleteConformation(info) {
@@ -781,7 +880,7 @@ function initVue() {
 
                     // await dbHelper.deleteLesson(name);
                     // this.refreshLessonList();
-                    if(goHome){
+                    if (goHome) {
                         this.$root.$router.push({ name: 'home' }).catch(err => { });
                     }
                 }
@@ -798,7 +897,7 @@ function initVue() {
             genericDialogAction(actionName, callbackData) {
                 console.log(`GenericDialog action = ${actionName}`);
                 this.genericDialog.toggle = false;
-                this.$root.$emit(this.genericDialog.callbackEventName, {actionName, callbackData});
+                this.$root.$emit(this.genericDialog.callbackEventName, { actionName, callbackData });
             },
         },
         beforeDestroy() {
@@ -924,3 +1023,10 @@ var isValidFileName = (function () {
         return rg1.test(fname) && !rg2.test(fname) && !rg3.test(fname);
     }
 })();
+
+function onlyUnique(value, index, self) {
+    return self.indexOf(value) === index;
+}
+
+//TODO
+//35 to always add a raw

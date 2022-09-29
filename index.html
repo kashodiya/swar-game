@@ -10,12 +10,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
 
     <style>
-        .hide-swars{
-            color: #e0e0e0 !important; 
+        .hide-swars {
+            color: #e0e0e0 !important;
         }
 
-        .hide-swars:hover{
-            color: black !important; 
+        .hide-swars:hover {
+            color: black !important;
+        }
+
+        .swars-not-in-game{
+            color: darkgrey !important;
         }
     </style>
 </head>
@@ -94,13 +98,13 @@
             <audio style="display: none;" id="recordingAudio" ref="recordingAudio" controls
                 class="audio-control"></audio>
 
-            <v-btn class="mb-5" @click="addNewPhrase" light XXclass="mt-4">Add New Phrase
+            <v-btn class="mb-5" @click="addNewPhrase" light>
+                <span class="text-decoration-underline">A</span>ddNew Phrase
                 <v-icon right>mdi-plus</v-icon>
             </v-btn>
 
-
-
-            <v-app-bar class="mb-1" flat v-for="(phrase, i) in lesson.phrases" :key="i" short dense rounded :color="currentPhraseIndex == i ? '#def4ff' : ''">
+            <v-app-bar class="mb-1" flat v-for="(phrase, i) in lesson.phrases" :key="i" short dense rounded
+                :color="currentPhraseIndex == i ? '#def4ff' : ''">
 
                 <v-chip @click="currentPhraseIndex = i">
                     {{i}}
@@ -148,6 +152,11 @@
                 </div>
             </v-app-bar>
 
+            <v-btn v-if="lesson.phrases.length > 10" @click="addNewPhrase" light class="mt-4 mb-5">
+                <span class="text-decoration-underline">A</span>ddNew Phrase
+                <v-icon right>mdi-plus</v-icon>
+            </v-btn>
+
 
             <!-- <v-simple-table>
                 <template v-slot:default>
@@ -175,9 +184,16 @@
                     </tbody>
                 </template>
             </v-simple-table> -->
+            <pre class="mt-3">
+Tips: 
+Leftmost black key = start recording swar.
+Second leftmost black key = start recording aakar.
+Leftmost white key = stop the recording. 
+            </pre>
 
-            <p class="mt-5">
-                <v-btn @click="saveLesson" light>Save Lesson
+            <p XXclass="mt-1">
+                <v-btn @click="saveLesson" light>
+                    <span class="text-decoration-underline">S</span>ave Lesson
                     <v-icon right>mdi-content-save</v-icon>
                 </v-btn>
                 <v-btn @click="cancel" light class="ml-5">Discard Changes
@@ -186,25 +202,20 @@
                 <v-btn v-if="mode == 'Edit'" @click="deleteLesson" light class="ml-5">Delete Lesson
                     <v-icon right>mdi-delete</v-icon>
                 </v-btn>
-                <v-btn v-if="mode == 'Edit'" @click="playGame" light class="ml-5">Play Game
+                <v-btn v-if="mode == 'Edit'" @click="playGame" light class="ml-5">
+                    <span class="text-decoration-underline">P</span>lay Game
                     <v-icon right>mdi-play</v-icon>
                 </v-btn>
 
             </p>
 
-            <pre>
-Tips: 
-Leftmost black key = start recording swar.
-Second leftmost black key = start recording aakar.
-Leftmost white key = stop the recording. 
-            </pre>
 
         </div>
     </template>
 
     <template id="play-template">
         <div>
-            <h2>
+            <h2 class="mb-5">
                 Lesson: {{lesson.name}}
                 <v-btn icon XXclass="mr-3" @click="editLesson">
                     <v-icon XXsmall>mdi-lead-pencil</v-icon>
@@ -217,11 +228,11 @@ Leftmost white key = stop the recording.
             <audio style="display: none;" id="recordingAudio" ref="recordingAudio" controls class="audio-control"
                 XXmuted="muted"></audio>
 
-            <v-radio-group v-model="gameTypeIndex">
-                <v-radio v-for="(type, i) in gameTypes" :key="i" :label="type" :value="i"></v-radio>
-            </v-radio-group>
+            <v-btn icon @click="stopPlaying" :disabled="!isPlaying">
+                <v-icon>mdi-stop-circle-outline</v-icon>
+            </v-btn>
 
-            <v-btn @click="play('aakar')" light>Play Aakar
+            <v-btn @click="play('aakar')" class="ml-3" light>Play Aakar
                 <v-icon right>mdi-music-note</v-icon>
             </v-btn>
 
@@ -234,13 +245,52 @@ Leftmost white key = stop the recording.
             </v-btn>
 
             <v-chip v-if="lesson.phrases[currentPhraseIndex].swarPhrase" class="ml-5 hide-swars">
-                {{lesson.phrases[currentPhraseIndex].swarPhrase.swarTimeData.map(d => d.swarEng).join(', ')}}
+                {{lesson.phrases[currentPhraseIndex].swarPhrase.swarTimeData.map(d => d.swarEng).join(' ')}}
             </v-chip>
 
-            <h3 class="mt-5 mb-2">Phrases used in this game</h3>
-            <v-chip :key="i" v-for="(phrase, i) in lesson.phrases" class="mr-1" @click="playPhraseAtIndex(i)">
-                {{phrase.swarPhrase.swarTimeData.map(d => d.swarEng).join(' ')}}
-            </v-chip>
+            <v-card class="mt-5">
+                <v-card-text>
+                    <h3 class="text-h6 mb-4">Phrases used in this game:</h3>
+                    <v-chip :key="i" v-for="(phrase, i) in lesson.phrases" :class="'mr-1 mt-2 ' + getPhraseColorClass(i)" @click="playPhraseAtIndex(i)">
+                        {{phrase.swarPhrase.swarTimeData.map(d => d.swarEng).join(' ')}}
+                    </v-chip>
+                </v-card-text>
+            </v-card>
+
+
+            <v-card class="mt-5">
+                <v-card-text>
+                    <div class="text-h6">
+                        Play mode:
+                    </div>
+                    <v-radio-group v-model="gameTypeIndex">
+                        <v-radio v-for="(type, i) in gameTypes" :key="i" :label="type" :value="i"></v-radio>
+                    </v-radio-group>
+                </v-card-text>
+            </v-card>
+
+
+            <v-card class="mt-5">
+                <v-card-text>
+                    <v-switch v-model="limitPhraseBySwarLength" label="Only play with phrase containing swars:"
+                        hide-details>
+                    </v-switch>
+                    <v-radio-group v-model="selectedPhraseSizesIndex" row :disabled="!limitPhraseBySwarLength">
+
+                        <!-- <span class="mr-5 text-subtitle-1">Only play with phrase containing swars:</span> -->
+                        <span class="mr-5 text-subtitle-1">Swar length:</span>
+
+                        <v-btn-toggle mandatory v-model="selectedPhraseSizeOptionIndex" class="mr-3">
+                            <v-btn small :key="i" v-for="(swarCompare, i) of phraseSizeOptions">
+                                <v-icon XXsmall>{{swarCompare}}</v-icon>
+                            </v-btn>
+                        </v-btn-toggle>
+
+                        <v-radio v-for="(size, i) in uniquePhraseSizes" :key="i" :label="String(size)" :value="i">
+                        </v-radio>
+                    </v-radio-group>
+                </v-card-text>
+            </v-card>
 
         </div>
     </template>
@@ -323,7 +373,8 @@ Leftmost white key = stop the recording.
                 <v-card-text class="text-subtitle-1"> {{genericDialog.body}} </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn text :key="i" v-for="(action, i) in genericDialog.actions" @click="genericDialogAction(action, genericDialog.callbackData)">
+                    <v-btn text :key="i" v-for="(action, i) in genericDialog.actions"
+                        @click="genericDialogAction(action, genericDialog.callbackData)">
                         {{action}}
                     </v-btn>
                 </v-card-actions>
