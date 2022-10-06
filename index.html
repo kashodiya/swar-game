@@ -48,7 +48,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(lesson, i) in state.lessons" :key="i" @click="playGame(i)">
+                        <tr v-for="(lesson, i) in state.lessons" :key="i" XXclick="playGame(i)">
                             <td>
                                 <v-btn icon @click="playGame(i)">
                                     <v-icon>mdi-play</v-icon>
@@ -282,7 +282,7 @@ Leftmost white key = stop the recording.
 
                         <v-btn-toggle mandatory v-model="selectedPhraseSizeOptionIndex" class="mr-3">
                             <v-btn small :key="i" v-for="(swarCompare, i) of phraseSizeOptions">
-                                <v-icon XXsmall>{{swarCompare}}</v-icon>
+                                <v-icon>{{swarCompare}}</v-icon>
                             </v-btn>
                         </v-btn-toggle>
 
