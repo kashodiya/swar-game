@@ -295,6 +295,12 @@ Leftmost white key = stop the recording.
         </div>
     </template>
 
+    <template id="help-template">
+        <div ref="welcome-template-body" v-html="bodyHTML">
+        </div>        
+    </template>
+
+
     <template id="bar-template">
         <div>
             <h2>This is bar</h2>
@@ -312,10 +318,10 @@ Leftmost white key = stop the recording.
                 </v-toolbar-title>
                 <v-spacer></v-spacer>
                 <v-spacer></v-spacer>
-                <!-- <v-btn to="/bar" class="mr-3" light>
-                    Record
-                    <v-icon right>mdi-record</v-icon>
-                </v-btn> -->
+                <v-btn to="/help" class="mr-3" light>
+                    Help
+                    <v-icon right>mdi-help</v-icon>
+                </v-btn>
                 <!-- <v-btn to="/bar" icon>
                     <v-icon>mdi-logout</v-icon>
                 </v-btn> -->
@@ -395,6 +401,7 @@ Leftmost white key = stop the recording.
     <!-- For JsZip docs: https://stuk.github.io/jszip/documentation/api_zipobject/async.html -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script src="main.js"></script>
 </body>

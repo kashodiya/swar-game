@@ -673,6 +673,27 @@ const Lesson = Vue.component('Lesson', {
     }
 })
 
+
+const Help = Vue.component('Help', {
+    template: '#help-template',
+    data() {
+        return {
+            state: store.state,
+            bodyHTML: ''
+        }
+    },
+    methods: {
+    },
+    async mounted() {
+        let helpMDtxt = await fetch('README.md').then(res => res.text());
+        // console.log(welcomeMDtxt);
+        this.bodyHTML = marked.parse(helpMDtxt);
+    },
+    created() {
+        console.log('Help created');
+    }
+})
+
 const Bar = Vue.component('Bar', {
     template: '#bar-template',
     data() {
@@ -694,6 +715,7 @@ function initVue() {
         { path: '/newLesson', component: Lesson, name: "newLesson", props: true },
         { path: '/editLesson', component: Lesson, name: "editLesson", props: true },
         { path: '/play', component: Play, name: "play", props: true },
+        { path: '/help', component: Help },
         { path: '/bar', component: Bar }
     ]
 

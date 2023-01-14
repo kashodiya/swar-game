@@ -1,5 +1,5 @@
-# swar-game
-Recognize swars from aakar using your own voice!
+# What is swar-game?
+- A fun and easy way to train your ears to recognize swars from aakar using your own voice!
 
 # Hot it works?
 - You record a few phrases in aakar as well as swars.
